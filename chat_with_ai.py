@@ -1,7 +1,8 @@
 import os
 
 from dotenv import load_dotenv # type: ignore
-from groq import Groq # type: ignore
+from groq import Groq #type: ignore
+from vector_db import VectorDB # type: ignore
 
 load_dotenv()
 
@@ -24,15 +25,17 @@ def ai_char(message):
             ai_response += chunk.choices[0].delta.content
     return ai_response
 
-
-def main():
-    print("Welcome to the AI Character Chat!")
+def chat_with_ai():
+    print("="*60)
+    print("Welcome to the AI Chat!")
+    print("Type System to set a system message. This helps provide more context or instructions to the AI.")
     print("Type 'exit' to quit.")
     messages = []
     while True:
         user_input = input("You: ")
         if user_input.lower() == 'exit':
             print("Goodbye!")
+            print("="*60)
             break
         # Allow the user to set a system message. This helps provide more context or instructions to the AI character.
         if user_input.lower() == 'system':
@@ -46,5 +49,43 @@ def main():
         print("\n")
         messages.append({"role": "assistant", "content": response})
 
+def query_db(db):
+    print("="*60)
+    print("Welcome to the Knowledge Base Query!")
+    print("Provide your query followed by the number of top relevant chunks(chunk_count) you want to retrieve.The default count is 1. Type 'exit' to quit.")
+    while True:
+        query = input("Enter your query: ")
+        if query.lower() == 'exit':
+            print("Exiting the knowledge base query.")
+            print("="*60)
+            break
+        top_k = input("chunk_count: ")
+        if not top_k.isdigit():
+            top_k = 1
+        else:
+            top_k = int(top_k)
+        results = db.query_knowledge_base(query,top_k)
+        print("Most relevant chunks from the knowledge base:")
+        for i, chunk in enumerate(results):
+            print(f"Chunk {i+1}: {chunk}")
+
+def main():
+    print("Welcome. Type 'chat to start chatting with the AI")
+    print("Type 'query' to query the knowledge base. This will return the most relevant chunks from the knowledge base for your query.")
+    print("Type 'exit' to quit the program.")
+    while True:
+        user_input = input("Enter your choice (chat/query/exit): ")
+        if user_input.lower() == 'query':
+            db = VectorDB()
+            db.process_knowledge_base()
+            query_db(db)
+        elif user_input.lower() == 'chat':
+            chat_with_ai()
+        else:
+            print("Exiting the program.")
+            break
+
 if __name__ == "__main__":
     main()
+
+
