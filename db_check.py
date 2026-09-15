@@ -5,7 +5,6 @@ import os
 from vector_db import VectorDB
 client = PersistentClient(path=os.getenv("DB_PATH"))
 print(client.get_collection(name=os.getenv('COLLECTION_NAME')).count())
-print(client.get_collection(name=os.getenv('COLLECTION_NAME')).peek())
 
 db = VectorDB()
 input_query = input("Enter your query: ")

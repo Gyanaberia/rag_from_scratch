@@ -68,7 +68,7 @@ class VectorDB:
             for file_index, filename in enumerate(files, start=1):
                 if(filename.endswith('.txt')):
                     chunk_id = 1
-                    for chunk in self.read_file_by_chunks(os.path.join(self.knowledge_base_path, filename),300):
+                    for chunk in self.read_file_by_chunks(os.path.join(self.knowledge_base_path, filename),int(os.getenv("CHUNK_SIZE", 1000))):
                         # print(f"Processing {filename}, chunk {chunk_id}")
                         vector_id = filename + "_" + str(chunk_id)
                         # Using hash to check if the existing chunk has changed. 
@@ -105,7 +105,10 @@ class VectorDB:
             stop_event.set()
             spinner_thread.join()
 
-    def query_knowledge_base(self, query, top_k=3):
+    '''
+    Return list of k most relevant chunks
+    '''
+    def query_knowledge_base(self, query, top_k=int(os.getenv("TOP_K"))):
         #create embedding for the query
         query_embedding = self.create_embeddings(query)
         #query the vector database for the most relevant chunks

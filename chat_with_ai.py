@@ -3,10 +3,13 @@ import os
 from dotenv import load_dotenv # type: ignore
 from groq import Groq #type: ignore
 from vector_db import VectorDB # type: ignore
-
+import streamlit as st  # type: ignore
 load_dotenv()
 
-def ai_char(message):
+'''
+Return AI response to a query in streaming mode
+'''
+def ai_model_api(message):
     groq_api_key = os.getenv("GROQ_API_KEY")
     groq_model = os.getenv("AI_MODEL")
 
@@ -25,7 +28,18 @@ def ai_char(message):
             ai_response += chunk.choices[0].delta.content
     return ai_response
 
-def chat_with_ai():
+'''Retrive relevant context for the query and create the prompt string'''
+def create_context_prompt(db,text):
+    list_chunks=db.query_knowledge_base(text)
+    context = ""
+    i=1
+    for chunk in list_chunks:
+        context+=str(i)+":"+chunk+"\n"
+        i+=1
+    prompt_string = "Context:"+context+"\n User Query:"+text+"\nCreate your response for the user query based solely in provided context and earlier conversation history.if the context doesn't contain the answer, say so — don't guess."
+    return prompt_string
+
+def chat_with_ai(db):
     print("="*60)
     print("Welcome to the AI Chat!")
     print("Type System to set a system message. This helps provide more context or instructions to the AI.")
@@ -41,18 +55,18 @@ def chat_with_ai():
         if user_input.lower() == 'system':
             system_message = input("Enter system message: ")
             messages.append({"role": "system", "content": system_message})
-            print("System message set.")
+            print("System message set.\n")
             continue
         #Keep appending to the messages list to maintain context for the AI character. This allows the AI to remember previous interactions and respond more naturally.
-        messages.append({"role": "user", "content": user_input})
-        response = ai_char(messages)
+        messages.append({"role": "user", "content": create_context_prompt(db, user_input)})
+        response = ai_model_api(messages)
         print("\n")
         messages.append({"role": "assistant", "content": response})
 
 def query_db(db):
     print("="*60)
     print("Welcome to the Knowledge Base Query!")
-    print("Provide your query followed by the number of top relevant chunks(chunk_count) you want to retrieve.The default count is 1. Type 'exit' to quit.")
+    print(f"Provide your query followed by the number of top relevant chunks(chunk_count) you want to retrieve.The default count is %. Type 'exit' to quit.",{os.getenv("TOP_K")})
     while True:
         query = input("Enter your query: ")
         if query.lower() == 'exit':
@@ -61,7 +75,7 @@ def query_db(db):
             break
         top_k = input("chunk_count: ")
         if not top_k.isdigit():
-            top_k = 1
+            top_k = os.getenv("TOP_K")
         else:
             top_k = int(top_k)
         results = db.query_knowledge_base(query,top_k)
@@ -70,17 +84,17 @@ def query_db(db):
             print(f"Chunk {i+1}: {chunk}")
 
 def main():
+    db = VectorDB()
+    db.process_knowledge_base()
     print("Welcome. Type 'chat to start chatting with the AI")
     print("Type 'query' to query the knowledge base. This will return the most relevant chunks from the knowledge base for your query.")
     print("Type 'exit' to quit the program.")
     while True:
         user_input = input("Enter your choice (chat/query/exit): ")
         if user_input.lower() == 'query':
-            db = VectorDB()
-            db.process_knowledge_base()
             query_db(db)
         elif user_input.lower() == 'chat':
-            chat_with_ai()
+            chat_with_ai(db)
         else:
             print("Exiting the program.")
             break
